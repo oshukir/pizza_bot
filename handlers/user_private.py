@@ -6,7 +6,7 @@ from aiogram.types import (
 
 user_private_router = Router()
 
-@user_private_router.message(CommandStart)
+@user_private_router.message(Command('start'))
 async def start_cmd(message: Message):
     await message.answer("Привет, я виртуальный помощник")
 

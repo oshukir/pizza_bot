@@ -12,6 +12,8 @@ from aiogram.types import (
 from config_reader import config
 from common.bot_cmds_list import private
 
+from handlers.user_private import user_private_router
+
 async def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -26,9 +28,13 @@ async def main():
         )
     )
 
-    
-    await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_my_commands(commands=private, scope=BotCommandScopeAllPrivateChats)
+    dp.include_routers(
+        user_private_router,
+        
+    )
+
+
+    await bot.set_my_commands(commands=private, scope=BotCommandScopeAllPrivateChats())
     await dp.start_polling(bot, allowed_updates=["message", "inline_query", "my_chat_member", "chat_member", "callback_query"])
 if __name__ == "__main__":
     asyncio.run(main())
