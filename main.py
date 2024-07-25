@@ -13,6 +13,8 @@ from config_reader import config
 from common.bot_cmds_list import private
 
 from handlers.user_private import user_private_router
+from handlers.user_group import user_group_router
+from handlers.admin_private import admin_router
 
 async def main():
     logging.basicConfig(
@@ -27,10 +29,12 @@ async def main():
             parse_mode=ParseMode.HTML
         )
     )
+    
 
     dp.include_routers(
+        admin_router,
         user_private_router,
-        
+        user_group_router,
     )
 
 
