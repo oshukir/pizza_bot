@@ -12,3 +12,5 @@ class Addproduct(StatesGroup):
         'Addproduct:price' : 'Введите стоиомость заново',
         'Addproduct:image' : 'Этот стейт последний, поэтому....'
     }
+
+    product_for_change = None
