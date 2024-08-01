@@ -10,7 +10,7 @@ from aiogram.types import (
     BotCommandScopeAllPrivateChats
 )
 from config_reader import config
-from common.bot_cmds_list import private
+# from common.bot_cmds_list import private
 
 from handlers.user_private import user_private_router
 from handlers.user_group import user_group_router
@@ -23,9 +23,8 @@ from database.engine import session_maker
 from middlewares.db import DataBaseSession
 
 async def on_startup(bot):
-    run_param = False
-    if run_param:
-        await drop_db()
+
+    # await drop_db()
     await create_db()
 
 async def on_shutdown(bot):
@@ -50,13 +49,14 @@ async def main():
     dp.update.middleware(DataBaseSession(session_pool=session_maker))
 
     dp.include_routers(
-        admin_router,
-        admin_router_cb,
         user_private_router,
         user_group_router,
+        admin_router,
+        admin_router_cb,
     )
 
-    await bot.set_my_commands(commands=private, scope=BotCommandScopeAllPrivateChats())
+    # await bot.delete_my_commands()
+    # await bot.set_my_commands(commands=private, scope=BotCommandScopeAllPrivateChats())
     await dp.start_polling(bot, allowed_updates=["message", "inline_query", "my_chat_member", "chat_member", "callback_query"])
 if __name__ == "__main__":
     asyncio.run(main())

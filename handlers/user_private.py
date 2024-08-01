@@ -7,56 +7,59 @@ from filters.chat_types import ChatTypeFilter
 from keyboards.reply import get_keyboard
 
 from database.orm_query import (
-    orm_get_products
+    orm_get_products,
+    orm_add_user,
+    orm_add_to_cart
 )
+from handlers.menu_processing import get_menu_content
 from database.engine import session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
+from callback_factory import MenuCallback
 
 user_private_router = Router()
 user_private_router.message.filter(ChatTypeFilter('private'))
 
-@user_private_router.message(Command('start'))
-async def start_cmd(message: Message):
-    await message.answer("Привет, я виртуальный помощник",
-                         reply_markup=get_keyboard(
-                             "Меню",
-                             "О магазине",
-                             "Варианты оплаты",
-                             "Варианты доставки",
-                             placeholder="Что вас интересует",
-                             sizes=(2,2)
-                         ))
 
-@user_private_router.message(Command("menu"))
-@user_private_router.message(F.text.lower() == "меню")
-async def start_cmd(message: Message, session: AsyncSession):
-    for product in await orm_get_products(session=session):
-        await message.answer_photo(
-            product.image,
-            caption=f"{product.name}\n{product.description}\nСтоимость:{round(product.price, 2)} тг"
-        )
-    await message.answer("Вот меню ⬆️")
 
-@user_private_router.message(Command("about"))
-@user_private_router.message(F.text.lower() == "о магазине")
-async def start_cmd(message: Message):
-    await message.answer("О нас")
+async def add_to_cart(callback: types.CallbackQuery, callback_data: MenuCallback, session: AsyncSession):
+    user = callback.from_user
+    await orm_add_user(
+        session,
+        user_id = user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=None,
+    )
+    await orm_add_to_cart(session, user_id = user.id, product_id = callback_data.product_id)
+    await callback.answer(text="Товар доабавлен в корзину.",
+                          show_alert=True)
 
-@user_private_router.message(Command("payment"))
-@user_private_router.message(F.text.lower() == "варианты оплаты")
-async def start_cmd(message: Message):
-    await message.answer("Варианты оплаты:")
 
-@user_private_router.message(Command("shipping"))
-@user_private_router.message(F.text.lower() == "варианты доставки")
-async def start_cmd(message: Message):
-    await message.answer("Варианты доставки")
+@user_private_router.message(CommandStart())
+async def start_cmd(message: types.Message, session: AsyncSession):
+    media, reply_markup = await get_menu_content(session, level=0, menu_name="main")
 
-@user_private_router.message(F.contact)
-async def get_contact(message: Message):
-    await message.answer(f"номер получен")
+    await message.answer_photo(media.media, caption=media.caption, reply_markup=reply_markup)
 
-@user_private_router.message(F.location)
-async def get_contact(message: Message):
-    await message.answer(f"локация получена")
 
+
+@user_private_router.callback_query(MenuCallback.filter())
+async def user_menu(callback: types.CallbackQuery, callback_data: MenuCallback, session: AsyncSession):
+    await callback.answer()
+
+    if callback_data.menu_name == "add_to_cart":
+        await add_to_cart(callback, callback_data, session)
+        return
+
+    media, reply_markup = await get_menu_content(
+        session=session,
+        level=callback_data.level,
+        menu_name=callback_data.menu_name,
+        category=callback_data.category,
+        page=callback_data.page,
+        user_id = callback.from_user.id,
+        product_id=callback_data.product_id
+    )
+
+    await callback.message.edit_media(media=media, reply_markup=reply_markup)
+    
